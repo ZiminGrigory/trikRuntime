@@ -91,7 +91,7 @@ TrikScriptRunnerInterface * TrikScriptRunner::fetchRunner(const ScriptType &styp
 
 void TrikScriptRunner::run(const QString &script, const ScriptType &stype, const QString &fileName)
 {
-	abortAll(); // FIXME: or fetchRunner(stype)->abort()? or abort(/*last*/)?
+//	abortAll(); // FIXME: or fetchRunner(stype)->abort()? or abort(/*last*/)?
 
 	fetchRunner(stype)->run(script, fileName);
 }

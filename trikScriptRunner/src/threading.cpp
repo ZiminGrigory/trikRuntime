@@ -92,6 +92,7 @@ void Threading::startThread(const QString &threadId, QScriptEngine *engine, cons
 
 	engine->moveToThread(thread);
 	connect(thread, SIGNAL(finished()), thread, SLOT(deleteLater()));
+//	thread->moveToThread(thread);
 	thread->start();
 
 	// wait until script actually start to avoid problems with multiple starts and resets
@@ -144,6 +145,8 @@ QScriptEngine * Threading::cloneEngine(QScriptEngine *engine)
 	return result;
 }
 
+#include <QEventLoop>
+#include <QAtomicInteger>
 void Threading::reset()
 {
 	if (!tryLockReset()) {
@@ -162,16 +165,51 @@ void Threading::reset()
 	mMessageMutex.unlock();
 	mThreadsMutex.lock();
 
+	qDebug() << Q_FUNC_INFO << __LINE__;
 	for (ScriptThread *thread : mThreads.values()) {
 		mScriptControl.reset();  // TODO: find more sophisticated solution to prevent waiting after abortion
 		thread->abort();
 	}
+	qDebug() << Q_FUNC_INFO << __LINE__  << this->thread();
 
 	mFinishedThreads.clear();
 	mThreadsMutex.unlock();
 	mScriptControl.reset();
 
-	waitForAll();
+//	QEventLoop loop;
+//	QTimer::singleShot(5000, [this, &loop](){loop.quit();});
+//	loop.exec();
+
+	qDebug() << Q_FUNC_INFO << __LINE__;
+//	waitForAll();
+	qDebug() << Q_FUNC_INFO << __LINE__;
+
+
+	QMutex mBarrier;
+
+	if (!mThreads.isEmpty()) {
+		int size1 = 0;
+		QAtomicInteger<int> size2 = 0;
+		auto lambda = [&size1, &size2, &mBarrier]() {
+			++size2;
+			if (size1 == size2) {
+				mBarrier.unlock();
+			}
+		};
+		for (auto thread : mThreads) {
+			if (thread->isRunning()) {
+				++size1;
+				connect(thread, &ScriptThread::finished, this, lambda, Qt::QueuedConnection);
+			}
+		}
+
+		if (size1) {
+			mBarrier.lock();
+			mBarrier.unlock();
+		}
+	}
+
+
 
 	qDeleteAll(mMessageQueueMutexes);
 	qDeleteAll(mMessageQueueConditions);

@@ -40,26 +40,33 @@ void ScriptThread::run()
 
 	qsrand(QDateTime::currentMSecsSinceEpoch());
 
+	qDebug() << Q_FUNC_INFO << __LINE__ << thread() << QThread::currentThreadId();
 	mEngine->evaluate(mScript);
+	qDebug() << Q_FUNC_INFO << __LINE__;
 
 	if (mEngine->hasUncaughtException()) {
+		qDebug() << Q_FUNC_INFO << __LINE__;
 		const int line = mEngine->uncaughtExceptionLineNumber();
 		const QString message = mEngine->uncaughtException().toString();
 		mError = tr("Line %1: %2").arg(QString::number(line), message);
 		QLOG_ERROR() << "Uncaught exception at line" << line << ":" << message;
 	} else if (mThreading.inEventDrivenMode()) {
+		qDebug() << Q_FUNC_INFO << __LINE__;
 		QEventLoop loop;
 		connect(this, SIGNAL(stopRunning()), &loop, SLOT(quit()), Qt::QueuedConnection);
 		loop.exec();
 	}
 
+	qDebug() << Q_FUNC_INFO << __LINE__ << mEngine->thread() << this->thread();
 	mEngine->deleteLater();
 	mThreading.threadFinished(mId);
+	qDebug() << Q_FUNC_INFO << __LINE__;
 	QLOG_INFO() << "Ended evaluation, thread" << this;
 }
 
 void ScriptThread::abort()
 {
+	qDebug() << Q_FUNC_INFO << this->thread() << mEngine->thread();
 	mEngine->abortEvaluation();
 	emit stopRunning();
 }
